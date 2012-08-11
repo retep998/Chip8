@@ -22,15 +22,12 @@ extern "C" {
     struct {
         uint64_t Counter;
         uint16_t Keys;
-        uint8_t Width;
-        uint8_t Height;
+        uint8_t Large;
         uint8_t DT;
         uint8_t ST;
-        uint8_t Resized;
     } Vars;
 }
 const size_t Zoom = 0x4;
-bool Throttle = true;
 SDL_Surface* Screen = nullptr;
 uint8_t Font[0x50] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0,//0
@@ -75,7 +72,6 @@ void HandleEvents() {
             case SDLK_x: Vars.Keys |= 0x2000; break;
             case SDLK_c: Vars.Keys |= 0x4000; break;
             case SDLK_v: Vars.Keys |= 0x8000; break;
-            case SDLK_t: Throttle = !Throttle; break;
             case SDLK_ESCAPE: std::exit(0); break;
             }
             break;
@@ -102,15 +98,16 @@ void HandleEvents() {
         }
     }
 }
-void SetupScreen() {
-    Screen = SDL_SetVideoMode(Vars.Width*Zoom, Vars.Height*Zoom, 8, SDL_SWSURFACE);
+void SetupScreen(uint8_t Large = 0) {
+    if (Large) Screen = SDL_SetVideoMode(128*Zoom, 64*Zoom, 8, SDL_SWSURFACE);
+    else Screen = SDL_SetVideoMode(64*Zoom, 32*Zoom, 8, SDL_SWSURFACE);
     SDL_Color Colors[2] = {{0, 0, 0, 255}, {255, 255, 255, 255}};
     SDL_SetColors(Screen, Colors, 0, 2);
 }
 void Initialize() {
+    Vars.Counter = 0;
     Vars.Keys = 0x0000;
-    Vars.Width = 0x40;
-    Vars.Height = 0x20;
+    Vars.Large = 0;
     Vars.DT = 0;
     Vars.ST = 0;
     std::memcpy(Memory + 0x50, Font, 0x50);
@@ -127,28 +124,39 @@ void MainLoop() {
     size_t Prev = 0;
     const size_t Delay = 100;
     size_t Last = __rdtsc();
+    uint8_t LLarge = 0;
     for (;;) {
         Time += std::chrono::milliseconds(Delay);
         std::this_thread::sleep_until(Time);
+        HandleEvents();
         if (Vars.DT) --Vars.DT;
         if (Vars.ST) {
             --Vars.ST;
             Beep(5000, Delay/2);
         }
-        HandleEvents();
         {
             size_t Cur = Vars.Counter;
             size_t Now = __rdtsc();
-            double CPL = (Now - Last)/((Cur - Prev)*65536.);
-            std::string Str = std::to_string(CPL);
-            SDL_WM_SetCaption((Str.erase(Str.length()-5) + " Cycles per Instruction").c_str(), "");
+            std::string Cpl = std::to_string(static_cast<double>(Now - Last)/(Cur - Prev));
+            SDL_WM_SetCaption((Cpl.erase(Cpl.length()-5) + " Cycles per Instruction").c_str(), "");
             Prev = Cur;
             Last = Now;
         }
+        uint8_t CLarge = Vars.Large;
+        if (CLarge != LLarge) {
+            SetupScreen(CLarge);
+            LLarge = CLarge;
+        }
         SDL_Rect r = {0, 0, Zoom, Zoom};
-        for (size_t y = 0; y < Vars.Height; ++y) {
+        if (CLarge) for (size_t y = 0; y < 64; ++y) {
             r.y = y*Zoom;
-            for (size_t x = 0; x < Vars.Width; ++x) {
+            for (size_t x = 0; x < 128; ++x) {
+                r.x = x*Zoom;
+                SDL_FillRect(Screen, &r, _bittest64((int64_t*)&Pixels[y][x>>6], x&0x3f));
+            }
+        } else for (size_t y = 0; y < 32; ++y) {
+            r.y = y*Zoom;
+            for (size_t x = 0; x < 64; ++x) {
                 r.x = x*Zoom;
                 SDL_FillRect(Screen, &r, _bittest64((int64_t*)&Pixels[y][x>>6], x&0x3f));
             }
