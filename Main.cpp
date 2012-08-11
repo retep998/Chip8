@@ -3,10 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include <iostream>
-#include <iomanip>
 #include <thread>
-#include <atomic>
-#include <random>
 #include <SDL/SDL.h>
 #include <Windows.h>
 namespace std {
