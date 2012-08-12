@@ -22,6 +22,7 @@ extern "C" {
         uint8_t Large;
         uint8_t DT;
         uint8_t ST;
+        uint8_t Over;
     } Vars;
 }
 const size_t Zoom = 0x4;
@@ -107,6 +108,7 @@ void Initialize() {
     Vars.Large = 0;
     Vars.DT = 0;
     Vars.ST = 0;
+    Vars.Over = 0;
     std::memcpy(Memory + 0x50, Font, 0x50);
     std::path p = "bench.ch8";
     size_t len = (size_t)std::file_size(p);
@@ -123,8 +125,7 @@ void MainLoop() {
     size_t Last = __rdtsc();
     uint8_t LLarge = 0;
     for (;;) {
-        Time += std::chrono::milliseconds(Delay);
-        std::this_thread::sleep_until(Time);
+        if (Vars.Over) return;
         HandleEvents();
         if (Vars.DT) --Vars.DT;
         if (Vars.ST) {
@@ -159,6 +160,8 @@ void MainLoop() {
             }
         }
         SDL_Flip(Screen);
+        Time += std::chrono::milliseconds(Delay);
+        std::this_thread::sleep_until(Time);
     }
 }
 void Chip8() {
