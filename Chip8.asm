@@ -1,69 +1,76 @@
 .data
 extern Memory:dq
-extern Vars:dq
-extern Pixels:db
-V dq 0, 0
+Mem     equ r8
+Jump    equ r9
+Count   equ r10
+Countw  equ r10w
+Rand    equ r11
+Src     equ rsi
+Dest    equ rdi
+V       equ Mem
+VF      equ Mem + 0fh
+Font    equ Mem + 10h
+SFont   equ Mem + 60h
+Stack   equ Mem + 100h
+Keys    equ Mem + 1d0h
+Counter equ Mem + 1d8h
+Delay   equ Mem + 1e0h
+CDelay  equ Mem + 1e4h
+Sound   equ Mem + 1e8h
+CSound  equ Mem + 1ech
+Large   equ Mem + 1f0h
+Over    equ Mem + 1f1h
+Pixels  equ Mem + 1000h
+jnxxx   equ Jump
+j00nx   equ Jump + 80h
 .code
 LogicLoop proc
-    ; Seeding random numbers
+    mov Mem, offset [Memory]
+    mov Src, offset [Memory + 200h]
+    mov Dest, offset [Memory]
+    mov Jump, offset [JumpTable]
     rdtsc
-    xor r13, rax
-    ; Variables
-    xor rax, rax
-    xor rbx, rbx
-    xor rcx, rcx
-    xor rdx, rdx
-    mov rsi, offset [Memory + 200h] ; Instruction pointer
-    mov rdi, offset [Memory] ; Memory pointer
-    ; Constants
-    mov r8, offset [Vars] ; Various variables
-    mov r9, offset [Memory] ; Base memory pointer
-    mov r10, offset [jumpt] ; Jump table
-    mov r11, offset [Pixels] ; The screen
-    mov r12, offset [V] ; Registers
-    xor r14, r14
-    xor r15, r15
-    jmp logloop
+    mov Rand, rax
     align 8h
 incc:
-    mov qword ptr [r8], rcx
+    add qword ptr [Counter], 10000h
     rdtsc
-    xor r13, rax
-    jmp logloop
+    xor Count, rax
+    jmp incdone
     align 8h
 logloop:
-    inc rcx
-    test cx, cx
+    dec Countw
     jz incc
-    movzx rax, word ptr [rsi]
-    add rsi, 2h
+incdone:
+    movzx rax, word ptr [Src]
+    add Src, 2h
     xchg ah, al
     mov rbx, rax
     shr rbx, 0ch
     and rax, 0fffh
-    jmp qword ptr [r10 + rbx * 8h]
+    jmp qword ptr [jnxxx + rbx * 8h]
     align 8h
 i0xxx:
     test ah, ah
-    jnz unkno
+    jnz inone
     mov rbx, rax
     shr rbx, 4h
     and rax, 0fh
-    jmp qword ptr [r10 + rbx * 8h + 80h]
+    jmp qword ptr [j00nx + rbx * 8h]
     align 8h
 i1xxx:
-    lea rsi, qword ptr [r9 + rax]
+    lea Src, qword ptr [Mem + rax]
     jmp logloop
     align 8h
 i2xxx:
     push rsi
-    lea rsi, qword ptr [r9 + rax]
+    lea rsi, qword ptr [Mem + rax]
     jmp logloop
     align 8h
 i3xxx:
     mov rbx, rax
     shr rbx, 8h
-    cmp byte ptr [r12 + rbx], al
+    cmp byte ptr [r8 + rbx], al
     jne logloop
     add rsi, 2h
     jmp logloop
@@ -71,7 +78,7 @@ i3xxx:
 i4xxx:
     mov rbx, rax
     shr rbx, 8h
-    cmp byte ptr [r12 + rbx], al
+    cmp byte ptr [r8 + rbx], al
     je logloop
     add rsi, 2h
     jmp logloop
@@ -81,8 +88,8 @@ i5xxx:
     shr rax, 4h
     and rax, 0fh
     shr rbx, 8h
-    mov al, byte ptr [r12 + rax]
-    cmp byte ptr [r12 + rbx], al
+    mov al, byte ptr [r8 + rax]
+    cmp byte ptr [r8 + rbx], al
     jne logloop
     add rsi, 2h
     jmp logloop
@@ -90,13 +97,13 @@ i5xxx:
 i6xxx:
     mov rbx, rax
     shr rbx, 8h
-    mov byte ptr [r12 + rbx], al
+    mov byte ptr [r8 + rbx], al
     jmp logloop
     align 8h
 i7xxx:
     mov rbx, rax
     shr rbx, 8h
-    add byte ptr [r12 + rbx], al
+    add byte ptr [r8 + rbx], al
     jmp logloop
     align 8h
 i8xxx:
@@ -127,12 +134,27 @@ ibxxx:
     jmp logloop
     align 8h
 icxxx:
-    xor r13, rcx
+    xor r13, r14
     movzx ebx, ah
     mov rdx, r13
     and rdx, rax
     mov byte ptr [r12 + rbx], dl
     jmp logloop
+    align 8h
+idxxx: ;0xyn -> rcx = x, rdx = y, rax = n
+    mov rcx, rax
+    shr rcx, 8h
+    movzx rcx, byte ptr [r12 + rcx]
+    and rax, 0ffh
+    mov rdx, rax
+    shr rdx, 4h
+    movzx rdx, byte ptr [r12 + rdx]
+    and rax, 0fh
+dloop:
+    and rdx, 3fh
+    dec rax
+    jnz dloop
+    jmp logloop ; Todo: Draw sprite
     align 8h
 i00cx:
     jmp logloop ; Todo: Scroll x down
@@ -147,7 +169,7 @@ i00e0:
     mov rax, r11
     mov rbx, 8h
     mov rdx, 80h
-    xorps xmm0, xmm0
+    pxor xmm0, xmm0
     align 8h
 clearloop:
     movdqa xmmword ptr [rax + 00h], xmm0
@@ -267,15 +289,15 @@ i8xxe:
     mov byte ptr [r12 + rax], dl
     jmp logloop
     align 8h
-unkno:
+inone:
     int 3
     jmp logloop
     align 8h
-jumpt:
-    dq i0xxx, i1xxx, i2xxx, i3xxx, i4xxx, i5xxx, i6xxx, i7xxx, i8xxx, i9xxx, iaxxx, ibxxx, icxxx, unkno, unkno, unkno ; inxxx
-    dq unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, i00cx, unkno, i00ex, i00fx ; i00nx
-    dq i00e0, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, i00ee, unkno ; i00en
-    dq unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, unkno, i00fb, i00fc, i00fd, i00fe, i00ff ; i00fn
-    dq i8xx0, i8xx1, i8xx2, i8xx3, i8xx4, i8xx5, i8xx6, i8xx7, unkno, unkno, unkno, unkno, unkno, unkno, i8xxe, unkno ; i8xxn
+JumpTable:
+    dq i0xxx, i1xxx, i2xxx, i3xxx, i4xxx, i5xxx, i6xxx, i7xxx, i8xxx, i9xxx, iaxxx, ibxxx, icxxx, idxxx, inone, inone ; inxxx
+    dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00cx, inone, i00ex, i00fx ; i00nx
+    dq i00e0, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00ee, inone ; i00en
+    dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00fb, i00fc, i00fd, i00fe, i00ff ; i00fn
+    dq i8xx0, i8xx1, i8xx2, i8xx3, i8xx4, i8xx5, i8xx6, i8xx7, inone, inone, inone, inone, inone, inone, i8xxe, inone ; i8xxn
 LogicLoop endp
 end
