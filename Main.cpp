@@ -18,20 +18,22 @@ uint8_t Memory[0x1400] = {0};//Entire Chip8 Memory
 //Blank namespace for local linkage
 namespace {
 //Local bindings of various sections of the memory
-auto& V       = reinterpret_cast<uint8_t(&)[0x10]>     (Memory[0x0]);//Registers
-auto& Font    = reinterpret_cast<uint8_t(&)[0x50]>     (Memory[0x10]);//Standard Font
-auto& SFont   = reinterpret_cast<uint8_t(&)[0xa0]>     (Memory[0x60]);//Super Font
-auto& Stack   = reinterpret_cast<uint16_t(&)[0xd0]>    (Memory[0x100]);//Call Stack
-auto& Keys    = reinterpret_cast<int64_t&>             (Memory[0x1d0]);//Keyboard State
-auto& Counter = reinterpret_cast<uint64_t&>            (Memory[0x1d8]);//Counter
-auto& DT      = reinterpret_cast<int32_t&>             (Memory[0x1e0]);//Delay Timer
-auto& CDT     = reinterpret_cast<int32_t&>             (Memory[0x1e4]);//Constant Delay Timer
-auto& ST      = reinterpret_cast<int32_t&>             (Memory[0x1e8]);//Sound Timer
-auto& CST     = reinterpret_cast<int32_t&>             (Memory[0x1ec]);//Constant Sound Timer
-auto& Large   = reinterpret_cast<uint8_t&>             (Memory[0x1f0]);//Super Display Mode
-auto& Over    = reinterpret_cast<uint8_t&>             (Memory[0x1f1]);//Execution Finished
-auto& Program = reinterpret_cast<char(&)[0xe00]>       (Memory[0x200]);//Program Data
-auto& Pixels  = reinterpret_cast<int64_t(&)[0x40][0x2]>(Memory[0x1000]);//Display Pixels
+auto& V       = reinterpret_cast<uint8_t(&)[0x10]>     (Memory[0x0000]);//Registers
+auto& Font    = reinterpret_cast<uint8_t(&)[0x50]>     (Memory[0x0010]);//Standard Font
+auto& SFont   = reinterpret_cast<uint8_t(&)[0xa0]>     (Memory[0x0060]);//Super Font
+auto& Keys    = reinterpret_cast<int64_t&>             (Memory[0x01d0]);//Keyboard State
+auto& Counter = reinterpret_cast<uint64_t&>            (Memory[0x01d8]);//Counter
+auto& DT      = reinterpret_cast<int32_t&>             (Memory[0x01e0]);//Delay Timer
+auto& CDT     = reinterpret_cast<int32_t&>             (Memory[0x01e4]);//Constant Delay Timer
+auto& ST      = reinterpret_cast<int32_t&>             (Memory[0x01e8]);//Sound Timer
+auto& CST     = reinterpret_cast<int32_t&>             (Memory[0x01ec]);//Constant Sound Timer
+auto& Large   = reinterpret_cast<uint8_t&>             (Memory[0x01f0]);//Super Display Mode
+auto& Over    = reinterpret_cast<uint8_t&>             (Memory[0x01f1]);//Execution Finished
+auto& ScrollV = reinterpret_cast<uint8_t&>             (Memory[0x01f2]);//Vertical Scroll
+auto& ScrollH = reinterpret_cast<uint8_t&>             (Memory[0x01f3]);//Horizontal Scroll
+auto& Program = reinterpret_cast<char(&)[0xe00]>       (Memory[0x0200]);//Program Data
+auto& Pixels  = reinterpret_cast<int64_t(&)[0x20]>     (Memory[0x1000]);//Small Display Pixels
+auto& SPixels = reinterpret_cast<int64_t(&)[0x40][0x2]>(Memory[0x1000]);//Super Display Pixels
 //Default Fonts
 uint8_t DeFont[0x50] = {
 0xF0, 0x90, 0x90, 0x90, 0xF0,
@@ -125,13 +127,13 @@ void UpdateScreen() {
         r.y = y*Zoom;
         for (uint16_t x = 0; x < 128; ++x) {
             r.x = x*Zoom;
-            SDL_FillRect(Screen, &r, _bittest64((int64_t*)&Pixels[y][x>>6], x&0x3f));
+            SDL_FillRect(Screen, &r, _bittest64(&SPixels[y][x>>6], x&0x3f));
         }
     } else for (uint16_t y = 0; y < 32; ++y) {
         r.y = y*Zoom;
         for (uint16_t x = 0; x < 64; ++x) {
             r.x = x*Zoom;
-            SDL_FillRect(Screen, &r, _bittest64((int64_t*)&Pixels[y][x>>6], x));
+            SDL_FillRect(Screen, &r, _bittest64(&Pixels[y], x));
         }
     }
     SDL_Flip(Screen);
@@ -154,7 +156,7 @@ void UpdateTime() {
 //Initializes the program data and defaults
 void Initialize() {
     std::memcpy(Font, DeFont, 0x50);
-    std::ifstream f("loop.ch8", std::ios::binary);
+    std::ifstream f("clear.ch8", std::ios::binary);
     f.read(Program, 0xe00);
     SDL_Init(SDL_INIT_VIDEO);
     SetupScreen(false);
