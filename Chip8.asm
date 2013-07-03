@@ -1,6 +1,5 @@
 seg8 segment page execute
 
-extern Memory:dq
 Src     equ rsi
 Dest    equ rdi
 Mem     equ r8
@@ -28,9 +27,9 @@ j00fn   equ Jump + 180h
 j8xxn   equ Jump + 200h
 
 LogicLoop proc
-    mov Src, offset [Memory + 200h]
-    mov Dest, offset [Memory]
-    mov Mem, offset [Memory]
+    lea Src, [rcx + 200h]
+    mov Dest, rcx
+    mov Mem, rcx
     mov Jump, offset [JumpTable]
     mov CLoop, offset [ChipLoop]
 incc:
@@ -56,6 +55,8 @@ incdone:
 i0xxx:
     mov ebx, eax
     shr ebx, 4h
+	test ebx, 0f0h
+	jnz inone
     and eax, 0fh
     jmp qword ptr [j00nx + rbx * 8h]
     align 10h
@@ -170,22 +171,22 @@ i00fx:
     align 10h
 i00e0:
     lea rax, qword ptr [Pixels]
-    mov ebx, 2h
-    cmp byte ptr [Large], 0
+    mov ebx, 4h
+    cmp byte ptr [Large], 0h
     jz sclear
-    mov ebx, 8h
+    mov ebx, 10h
 sclear:
-    pxor xmm0, xmm0
-    mov edx, 80h
+	xor rcx, rcx
+    mov edx, 40h
 clearl:
-    movaps xmmword ptr [rax + 00h], xmm0
-    movaps xmmword ptr [rax + 10h], xmm0
-    movaps xmmword ptr [rax + 20h], xmm0
-    movaps xmmword ptr [rax + 30h], xmm0
-    movaps xmmword ptr [rax + 40h], xmm0
-    movaps xmmword ptr [rax + 50h], xmm0
-    movaps xmmword ptr [rax + 60h], xmm0
-    movaps xmmword ptr [rax + 70h], xmm0
+    mov qword ptr [rax + 00h], rcx
+    mov qword ptr [rax + 08h], rcx
+    mov qword ptr [rax + 10h], rcx
+    mov qword ptr [rax + 18h], rcx
+    mov qword ptr [rax + 20h], rcx
+    mov qword ptr [rax + 28h], rcx
+    mov qword ptr [rax + 30h], rcx
+    mov qword ptr [rax + 38h], rcx
     add rax, rdx
     dec ebx
     jnz clearl
@@ -253,8 +254,8 @@ i8xx6:
     jmp CLoop
     align 10h
 i8xx7:
-    mov dl, byte ptr [V + rax]
-    sub dl, byte ptr [V + rcx]
+    mov dl, byte ptr [V + rcx]
+    sub dl, byte ptr [V + rax]
     mov byte ptr [V + rax], dl
     setnc byte ptr [VF]
     jmp CLoop
@@ -269,7 +270,7 @@ inone:
     jmp CLoop
     align 10h
 JumpTable:
-    dq i0xxx, i1xxx, i2xxx, i3xxx, i4xxx, i5xxx, i6xxx, i7xxx, i8xxx, i9xxx, iaxxx, ibxxx, icxxx, idxxx, inone, inone ; inxxx
+    dq i0xxx, i1xxx, i2xxx, i3xxx, i4xxx, i5xxx, i6xxx, i7xxx, i8xxx, i9xxx, iaxxx, ibxxx, icxxx, idxxx, iexxx, ifxxx ; inxxx
     dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00cx, inone, i00ex, i00fx ; i00nx
     dq i00e0, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00ee, inone ; i00en
     dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00fb, i00fc, i00fd, i00fe, i00ff ; i00fn

@@ -20,8 +20,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Chip8.asm">
+    <MASM Include="Chip8.asm">
       <Filter>Source Files</Filter>
-    </CustomBuild>
+    </MASM>
   </ItemGroup>
 </Project>
