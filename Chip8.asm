@@ -44,6 +44,11 @@ j00en   equ Jump + 100h
 j00fn   equ Jump + 180h
 j8xxn   equ Jump + 200h
 
+LogicLoopPosix proc
+    mov rcx, rdi
+    call LogicLoop
+LogicLoopPosix endp
+
 LogicLoop proc
     lea Src, [rcx + 200h]
     mov Dest, rcx
@@ -73,8 +78,8 @@ incdone:
 i0xxx:
     mov ebx, eax
     shr ebx, 4h
-	test ebx, 0f0h
-	jnz inone
+    test ebx, 0f0h
+    jnz inone
     and eax, 0fh
     jmp qword ptr [j00nx + rbx * 8h]
     align 10h
@@ -194,7 +199,7 @@ i00e0:
     jz sclear
     mov ebx, 10h
 sclear:
-	xor rcx, rcx
+    xor rcx, rcx
     mov edx, 40h
 clearl:
     mov qword ptr [rax + 00h], rcx
@@ -214,11 +219,11 @@ i00ee:
     pop rsi
     jmp CLoop
     align 10h
-i00fb:
-    jmp CLoop ; Todo: Scroll 4 right
+i00fb: ; TODO: Scroll 4 right
+    jmp CLoop
     align 10h
-i00fc:
-    jmp CLoop ; Todo: Scroll 4 left
+i00fc: ; TODO: Scroll 4 left
+    jmp CLoop
     align 10h
 i00fd:
     mov byte ptr [Over], 1h
@@ -293,6 +298,9 @@ JumpTable:
     dq i00e0, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00ee, inone ; i00en
     dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, i00fb, i00fc, i00fd, i00fe, i00ff ; i00fn
     dq i8xx0, i8xx1, i8xx2, i8xx3, i8xx4, i8xx5, i8xx6, i8xx7, inone, inone, inone, inone, inone, inone, i8xxe, inone ; i8xxn
+    dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone ; iexnx
+    dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone ; iex9n
+    dq inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone, inone ; iexan
 LogicLoop endp
 
 end

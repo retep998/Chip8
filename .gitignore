@@ -1,4 +1,5 @@
 *
+!.gitignore
 !*.ch8
 !LICENSE.txt
 !README.md

@@ -16,15 +16,16 @@
 // along with this program.If not, see < http://www.gnu.org/licenses/>.     //
 //////////////////////////////////////////////////////////////////////////////
 
+#include <SDL/SDL.h>
 #include <cstdint>
 #include <fstream>
-#include <ctime>
+#include <cstring>
 #include <string>
-#include <SDL/SDL.h>
 #include <chrono>
 #include <thread>
 
 extern "C" void LogicLoop(uint8_t *);
+extern "C" void LogicLoopPosix(uint8_t *);
 
 class Chip8
 {
@@ -32,7 +33,7 @@ public:
     Chip8(std::string name) :
         Memory { },
         Screen {nullptr},
-        LastCycle {0},
+        LastCycle {std::chrono::high_resolution_clock::now()},
         LastCount {0},
         WasLarge {false},
         V {reinterpret_cast<uint8_t(&)[0x10]>(Memory[0x0000])},
@@ -78,7 +79,11 @@ public:
         SDL_Init(SDL_INIT_VIDEO);
         SetupScreen(false);
         std::thread {[=] {
+#ifdef _WIN32
             LogicLoop(Memory);
+#else
+            LogicLoopPosix(Memory);
+#endif
         }}.detach();
         while (!Over) {
             HandleEvents();
@@ -98,7 +103,7 @@ private:
     uint8_t Memory[0x1400];
 
     SDL_Surface * Screen;
-    uint64_t LastCycle;
+    std::chrono::high_resolution_clock::time_point LastCycle;
     uint64_t LastCount;
     bool WasLarge;
 
@@ -155,15 +160,17 @@ private:
 
     void UpdateTime()
     {
-        const uint64_t count {Counter};
-        const uint64_t cycles {__rdtsc()};
         ++CDT;
         if (ST - CST++ > 0) {
-            //Beep(5000 + n & 0xff, d / 2);
+            //Beep - Anyone got something cross-platform?
         }
-        const std::string cpl {std::to_string(static_cast<double>(cycles - LastCycle) / (count - LastCount)).erase(5) + " CPI"};
-        SDL_WM_SetCaption(cpl.c_str(), "");
-        LastCycle = cycles;
+        uint64_t count {Counter};
+        const std::chrono::high_resolution_clock::time_point cycle {std::chrono::high_resolution_clock::now()};
+        int64_t nano = std::chrono::duration_cast<std::chrono::nanoseconds>(cycle - LastCycle).count();
+        if (LastCount == count) ++count;
+        const std::string rate {std::to_string(nano / (count - LastCount)) + " nano per cycle"};
+        SDL_WM_SetCaption(rate.c_str(), "");
+        LastCycle = cycle;
         LastCount = count;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
