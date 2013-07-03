@@ -1,4 +1,21 @@
-#define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
+//////////////////////////////////////////////////////////////////////////////
+// Chip8 - A emulator for the Chip8 system                                  //
+// Copyright(C) 2013 Peter Atashian                                         //
+//                                                                          //
+// This program is free software : you can redistribute it and / or modify  //
+// it under the terms of the GNU Affero General Public License as           //
+// published by the Free Software Foundation, either version 3 of the       //
+// License, or (at your option) any later version.                          //
+//                                                                          //
+// This program is distributed in the hope that it will be useful,          //
+// but WITHOUT ANY WARRANTY; without even the implied warranty of           //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the              //
+// GNU Affero General Public License for more details.                      //
+//                                                                          //
+// You should have received a copy of the GNU Affero General Public License //
+// along with this program.If not, see < http://www.gnu.org/licenses/>.     //
+//////////////////////////////////////////////////////////////////////////////
+
 #include <cstdint>
 #include <fstream>
 #include <ctime>
@@ -14,6 +31,7 @@ class Chip8
 public:
     Chip8(std::string name) :
         Memory { },
+        Screen {nullptr},
         LastCycle {0},
         LastCount {0},
         WasLarge {false},
@@ -54,17 +72,24 @@ public:
         };
         std::memcpy(Font, DefaultFont, 0x50);
         {
-            std::ifstream file(name, std::ios::binary);
+            std::ifstream file {name, std::ios::binary};
             file.read(Program, 0xe00);
         }
         SDL_Init(SDL_INIT_VIDEO);
         SetupScreen(false);
-        std::thread(std::bind(LogicLoop, Memory)).detach();
+        std::thread {[=] {
+            LogicLoop(Memory);
+        }}.detach();
         while (!Over) {
             HandleEvents();
             UpdateScreen();
             UpdateTime();
         }
+    }
+
+    ~Chip8()
+    {
+        SDL_Quit();
     }
 
 private:
@@ -100,7 +125,7 @@ private:
     {
         if (big) Screen = SDL_SetVideoMode(128 * Zoom, 64 * Zoom, 8, SDL_SWSURFACE);
         else Screen = SDL_SetVideoMode(64 * Zoom, 32 * Zoom, 8, SDL_SWSURFACE);
-        SDL_Color Colors[2] = {{0, 15, 0, 255}, {31, 255, 31, 255}};
+        SDL_Color Colors[2] {{0, 15, 0, 255}, {31, 255, 31, 255}};
         SDL_SetColors(Screen, Colors, 0, 2);
     }
 
@@ -112,15 +137,15 @@ private:
             SetupScreen(large);
         }
         SDL_Rect rect {0, 0, Zoom, Zoom};
-        if (large) for (uint16_t y = 0; y < 64; ++y) {
+        if (large) for (uint16_t y {0}; y < 64; ++y) {
             rect.y = y * Zoom;
-            for (uint16_t x = 0; x < 128; ++x) {
+            for (uint16_t x {0}; x < 128; ++x) {
                 rect.x = x * Zoom;
                 SDL_FillRect(Screen, &rect, (SPixels[y][x >> 6] >> (x & 0x3f)) & 1);
             }
-        } else for (uint16_t y = 0; y < 32; ++y) {
+        } else for (uint16_t y {0}; y < 32; ++y) {
             rect.y = y * Zoom;
-            for (uint16_t x = 0; x < 64; ++x) {
+            for (uint16_t x {0}; x < 64; ++x) {
                 rect.x = x * Zoom;
                 SDL_FillRect(Screen, &rect, (Pixels[y] >> x) & 1);
             }
@@ -145,7 +170,7 @@ private:
 
     void HandleEvents()
     {
-        SDL_Event e;
+        SDL_Event e { };
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
             case SDL_QUIT:
