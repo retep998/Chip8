@@ -1,19 +1,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Chip8 - A emulator for the Chip8 system                                  ;;
-;; Copyright(C) 2013 Peter Atashian                                         ;;
+;; Chip8 - An emulator for the Chip8 system                                 ;;
+;; Copyright © 2013 Peter Atashian                                          ;;
 ;;                                                                          ;;
-;; This program is free software : you can redistribute it and ; or modify  ;;
-;; it under the terms of the GNU Affero General Public License as           ;;
-;; published by the Free Software Foundation, either version 3 of the       ;;
-;; License, or (at your option) any later version.                          ;;
+;; This program is free software: you can redistribute it and;or modify     ;;
+;; it under the terms of the GNU Affero General Public License as published ;;
+;; by the Free Software Foundation, either version 3 of the License, or     ;;
+;; (at your option) any later version.                                      ;;
 ;;                                                                          ;;
 ;; This program is distributed in the hope that it will be useful,          ;;
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of           ;;
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the              ;;
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            ;;
 ;; GNU Affero General Public License for more details.                      ;;
 ;;                                                                          ;;
 ;; You should have received a copy of the GNU Affero General Public License ;;
-;; along with this program.If not, see < http://www.gnu.org/licenses/>.     ;;
+;; along with this program.  If not, see <http://www.gnu.org;licenses/>.    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 seg8 segment page execute
@@ -24,7 +24,6 @@ Mem     equ r8
 Jump    equ r9
 Count   equ r10
 Rand    equ r11
-CLoop   equ r12
 V       equ Mem
 VF      equ Mem + 0fh
 Font    equ Mem + 10h
@@ -54,7 +53,6 @@ LogicLoop proc
     mov Dest, rcx
     mov Mem, rcx
     mov Jump, offset [JumpTable]
-    mov CLoop, offset [ChipLoop]
 incc:
     mov qword ptr [Counter], Count
     rdtsc
@@ -68,8 +66,8 @@ ChipLoop:
     jz incc
 incdone:
     movzx eax, word ptr [Src]
-    add Src, 2h
     rol ax, 8
+    add Src, 2h
     mov ebx, eax
     shr ebx, 0ch
     and eax, 0fffh
@@ -84,13 +82,13 @@ i0xxx:
     jmp qword ptr [j00nx + rbx * 8h]
     align 10h
 i1xxx:
-    lea Src, qword ptr [Mem + rax]
-    jmp CLoop
+    lea Src, [Mem + rax]
+    jmp ChipLoop
     align 10h
 i2xxx:
     push Src
-    lea Src, qword ptr [Mem + rax]
-    jmp CLoop
+    lea Src, [Mem + rax]
+    jmp ChipLoop
     align 10h
 i3xxx:
     mov ebx, eax
@@ -99,7 +97,7 @@ i3xxx:
     jne noskip3
     add Src, 2h
 noskip3:
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i4xxx:
     mov ebx, eax
@@ -108,7 +106,7 @@ i4xxx:
     je noskip4
     add Src, 2h
 noskip4:
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i5xxx:
     mov ebx, eax
@@ -120,19 +118,19 @@ i5xxx:
     jne noskip5
     add Src, 2h
 noskip5:
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i6xxx:
     mov ebx, eax
     shr ebx, 8h
     mov byte ptr [V + rbx], al
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i7xxx:
     mov ebx, eax
     shr ebx, 8h
     add byte ptr [V + rbx], al
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xxx:
     mov ebx, eax
@@ -153,17 +151,17 @@ i9xxx:
     je noskip9
     add Src, 2h
 noskip9:
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 iaxxx:
-    lea Dest, qword ptr [Mem + rax]
-    jmp CLoop
+    lea Dest, [Mem + rax]
+    jmp ChipLoop
     align 10h
 ibxxx:
     movzx ebx, byte ptr [V]
     add ebx, eax
-    lea Src, qword ptr [Mem + rbx]
-    jmp CLoop
+    lea Src, [Mem + rbx]
+    jmp ChipLoop
     align 10h
 icxxx:
     xor Rand, Count
@@ -172,19 +170,39 @@ icxxx:
     mov rdx, Rand
     and edx, eax
     mov byte ptr [V + rbx], dl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
-idxxx: ; TODO
-    jmp CLoop
+idxxx: ; TODO: Draw sprite
+    ; x eax
+    ; y ebx
+    ; n ecx
+    mov ecx, eax
+    mov ebx, eax
+    and ecx, 0fh
+    shr ebx, 4h
+    shr eax, 8h
+    and ebx, 0fh
+    movzx eax, byte ptr [V + rax]
+    movzx ebx, byte ptr [V + rbx]
+    cmp byte ptr [Large], 0
+    jne drawlarge
+drawsmall:
+    ;r12 
+    lea r12, [Pixels + rax]
+    mov rdx, rbx
+    jmp ChipLoop
+drawlarge:
+
+    jmp ChipLoop
     align 10h
 iexxx: ; TODO
-    jmp CLoop
+    jmp inone
     align 10h
 ifxxx: ; TODO
-    jmp CLoop
+    jmp inone
     align 10h
-i00cx:
-    jmp CLoop ; Todo: Scroll x down
+i00cx: ; TODO: Scroll x down
+    jmp inone
     align 10h
 i00ex:
     jmp qword ptr [j00en + rax * 8h]
@@ -193,14 +211,15 @@ i00fx:
     jmp qword ptr [j00fn + rax * 8h]
     align 10h
 i00e0:
-    lea rax, qword ptr [Pixels]
-    mov ebx, 4h
+    lea rax, [Pixels]
+    mov ebx, 20h
     cmp byte ptr [Large], 0h
     jz sclear
-    mov ebx, 10h
+    mov ebx, 80h
 sclear:
     xor rcx, rcx
     mov edx, 40h
+    align 10h
 clearl:
     mov qword ptr [rax + 00h], rcx
     mov qword ptr [rax + 08h], rcx
@@ -213,17 +232,17 @@ clearl:
     add rax, rdx
     dec ebx
     jnz clearl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i00ee:
-    pop rsi
-    jmp CLoop
+    pop Src
+    jmp ChipLoop
     align 10h
 i00fb: ; TODO: Scroll 4 right
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i00fc: ; TODO: Scroll 4 left
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i00fd:
     mov byte ptr [Over], 1h
@@ -233,64 +252,64 @@ waitexit:
     align 10h
 i00fe:
     mov byte ptr [Large], 0h
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i00ff:
     mov byte ptr [Large], 1h
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx0:
     mov dl, byte ptr [V + rcx]
     mov byte ptr [V + rax], dl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx1:
     mov dl, byte ptr [V + rcx]
     or byte ptr [V + rax], dl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx2:
     mov dl, byte ptr [V + rcx]
     and byte ptr [V + rax], dl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx3:
     mov dl, byte ptr [V + rcx]
     xor byte ptr [V + rax], dl
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx4:
     mov dl, byte ptr [V + rcx]
     add byte ptr [V + rax], dl
     setc byte ptr [VF]
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx5:
     mov dl, byte ptr [V + rcx]
     sub byte ptr [V + rax], dl
     setnc byte ptr [VF]
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx6:
     shr byte ptr [V + rax], 1
     setc byte ptr [VF]
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xx7:
     mov dl, byte ptr [V + rcx]
     sub dl, byte ptr [V + rax]
     mov byte ptr [V + rax], dl
     setnc byte ptr [VF]
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 i8xxe:
     shl byte ptr [V + rax], 1
     setc byte ptr [VF]
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 inone:
     int 3
-    jmp CLoop
+    jmp ChipLoop
     align 10h
 JumpTable:
     dq i0xxx, i1xxx, i2xxx, i3xxx, i4xxx, i5xxx, i6xxx, i7xxx, i8xxx, i9xxx, iaxxx, ibxxx, icxxx, idxxx, iexxx, ifxxx ; inxxx

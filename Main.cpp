@@ -1,19 +1,19 @@
 //////////////////////////////////////////////////////////////////////////////
-// Chip8 - A emulator for the Chip8 system                                  //
-// Copyright(C) 2013 Peter Atashian                                         //
+// Chip8 - An emulator for the Chip8 system                                 //
+// Copyright © 2013 Peter Atashian                                          //
 //                                                                          //
-// This program is free software : you can redistribute it and / or modify  //
-// it under the terms of the GNU Affero General Public License as           //
-// published by the Free Software Foundation, either version 3 of the       //
-// License, or (at your option) any later version.                          //
+// This program is free software: you can redistribute it and/or modify     //
+// it under the terms of the GNU Affero General Public License as published //
+// by the Free Software Foundation, either version 3 of the License, or     //
+// (at your option) any later version.                                      //
 //                                                                          //
 // This program is distributed in the hope that it will be useful,          //
 // but WITHOUT ANY WARRANTY; without even the implied warranty of           //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the              //
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            //
 // GNU Affero General Public License for more details.                      //
 //                                                                          //
 // You should have received a copy of the GNU Affero General Public License //
-// along with this program.If not, see < http://www.gnu.org/licenses/>.     //
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.    //
 //////////////////////////////////////////////////////////////////////////////
 
 #include <SDL/SDL.h>
@@ -27,89 +27,86 @@
 extern "C" void LogicLoop(uint8_t *);
 extern "C" void LogicLoopPosix(uint8_t *);
 
-class Chip8
-{
+class Chip8 {
 public:
     Chip8(std::string name) :
-        Memory { },
-        Screen {nullptr},
-        LastCycle {std::chrono::high_resolution_clock::now()},
-        LastCount {0},
-        WasLarge {false},
-        V {reinterpret_cast<uint8_t(&)[0x10]>(Memory[0x0000])},
-        Font {reinterpret_cast<uint8_t(&)[0x50]>(Memory[0x0010])},
-        SFont {reinterpret_cast<uint8_t(&)[0xa0]>(Memory[0x0060])},
-        Keys {reinterpret_cast<int64_t &>(Memory[0x01d0])},
-        Counter {reinterpret_cast<uint64_t &>(Memory[0x01d8])},
-        DT {reinterpret_cast<int32_t &>(Memory[0x01e0])},
-        CDT {reinterpret_cast<int32_t &>(Memory[0x01e4])},
-        ST {reinterpret_cast<int32_t &>(Memory[0x01e8])},
-        CST {reinterpret_cast<int32_t &>(Memory[0x01ec])},
-        Large {reinterpret_cast<bool &>(Memory[0x01f0])},
-        Over {reinterpret_cast<uint8_t &>(Memory[0x01f1])},
-        ScrollV {reinterpret_cast<uint8_t &>(Memory[0x01f2])},
-        ScrollH {reinterpret_cast<uint8_t &>(Memory[0x01f3])},
-        Program {reinterpret_cast<char(&)[0xe00]>(Memory[0x0200])},
-        Pixels {reinterpret_cast<uint64_t(&)[0x20]>(Memory[0x1000])},
-        SPixels {reinterpret_cast<uint64_t(&)[0x40][0x2]>(Memory[0x1000])}
-    {
-        const uint8_t DefaultFont[0x50] = {
-            0xF0, 0x90, 0x90, 0x90, 0xF0,
-            0x20, 0x60, 0x20, 0x20, 0x70,
-            0xF0, 0x10, 0xF0, 0x80, 0xF0,
-            0xF0, 0x10, 0xF0, 0x10, 0xF0,
-            0x90, 0x90, 0xF0, 0x10, 0x10,
-            0xF0, 0x80, 0xF0, 0x10, 0xF0,
-            0xF0, 0x80, 0xF0, 0x90, 0xF0,
-            0xF0, 0x10, 0x20, 0x40, 0x40,
-            0xF0, 0x90, 0xF0, 0x90, 0xF0,
-            0xF0, 0x90, 0xF0, 0x10, 0xF0,
-            0xF0, 0x90, 0xF0, 0x90, 0x90,
-            0xE0, 0x90, 0xE0, 0x90, 0xE0,
-            0xF0, 0x80, 0x80, 0x80, 0xF0,
-            0xE0, 0x90, 0x90, 0x90, 0xE0,
-            0xF0, 0x80, 0xF0, 0x80, 0xF0,
-            0xF0, 0x80, 0xF0, 0x80, 0x80
-        };
-        std::memcpy(Font, DefaultFont, 0x50);
-        {
-            std::ifstream file {name, std::ios::binary};
-            file.read(Program, 0xe00);
-        }
-        SDL_Init(SDL_INIT_VIDEO);
-        SetupScreen(false);
-        std::thread {[=] {
+        Memory{},
+        Screen{nullptr},
+        LastCycle{std::chrono::high_resolution_clock::now()},
+        LastCount{0},
+        WasLarge{false},
+        V{reinterpret_cast<uint8_t (&)[0x10]>(Memory[0x0000])},
+        Font{reinterpret_cast<uint8_t (&)[0x50]>(Memory[0x0010])},
+        SFont{reinterpret_cast<uint8_t (&)[0xa0]>(Memory[0x0060])},
+        Keys{reinterpret_cast<int64_t &>(Memory[0x01d0])},
+        Counter{reinterpret_cast<uint64_t &>(Memory[0x01d8])},
+        DT{reinterpret_cast<int32_t &>(Memory[0x01e0])},
+        CDT{reinterpret_cast<int32_t &>(Memory[0x01e4])},
+        ST{reinterpret_cast<int32_t &>(Memory[0x01e8])},
+        CST{reinterpret_cast<int32_t &>(Memory[0x01ec])},
+        Large{reinterpret_cast<bool &>(Memory[0x01f0])},
+        Over{reinterpret_cast<uint8_t &>(Memory[0x01f1])},
+        ScrollV{reinterpret_cast<uint8_t &>(Memory[0x01f2])},
+        ScrollH{reinterpret_cast<uint8_t &>(Memory[0x01f3])},
+        Program{reinterpret_cast<char (&)[0xe00]>(Memory[0x0200])},
+        Pixels{reinterpret_cast<uint8_t (&)[0x40][0x20]>(Memory[0x1000])},
+        SPixels{reinterpret_cast<uint8_t (&)[0x80][0x40]>(Memory[0x1000])} {
+            const uint8_t DefaultFont[0x50] = {
+                0xF0, 0x90, 0x90, 0x90, 0xF0,
+                0x20, 0x60, 0x20, 0x20, 0x70,
+                0xF0, 0x10, 0xF0, 0x80, 0xF0,
+                0xF0, 0x10, 0xF0, 0x10, 0xF0,
+                0x90, 0x90, 0xF0, 0x10, 0x10,
+                0xF0, 0x80, 0xF0, 0x10, 0xF0,
+                0xF0, 0x80, 0xF0, 0x90, 0xF0,
+                0xF0, 0x10, 0x20, 0x40, 0x40,
+                0xF0, 0x90, 0xF0, 0x90, 0xF0,
+                0xF0, 0x90, 0xF0, 0x10, 0xF0,
+                0xF0, 0x90, 0xF0, 0x90, 0x90,
+                0xE0, 0x90, 0xE0, 0x90, 0xE0,
+                0xF0, 0x80, 0x80, 0x80, 0xF0,
+                0xE0, 0x90, 0x90, 0x90, 0xE0,
+                0xF0, 0x80, 0xF0, 0x80, 0xF0,
+                0xF0, 0x80, 0xF0, 0x80, 0x80
+            };
+            std::memcpy(Font, DefaultFont, 0x50);
+            {
+                std::ifstream file{name, std::ios::binary};
+                file.read(Program, 0xe00);
+            }
+            SDL_Init(SDL_INIT_VIDEO);
+            SetupScreen(false);
+            std::thread{[=] {
 #ifdef _WIN32
-            LogicLoop(Memory);
+                LogicLoop(Memory);
 #else
-            LogicLoopPosix(Memory);
+                LogicLoopPosix(Memory);
 #endif
-        }}.detach();
-        while (!Over) {
-            HandleEvents();
-            UpdateScreen();
-            UpdateTime();
-        }
+            }}.detach();
+            while (!Over) {
+                HandleEvents();
+                UpdateScreen();
+                UpdateTime();
+            }
     }
 
-    ~Chip8()
-    {
+    ~Chip8() {
         SDL_Quit();
     }
 
 private:
     static const uint16_t Zoom = 0x4;
 
-    uint8_t Memory[0x1400];
+    uint8_t Memory[0x3000];
 
     SDL_Surface * Screen;
     std::chrono::high_resolution_clock::time_point LastCycle;
     uint64_t LastCount;
     bool WasLarge;
 
-    uint8_t(&V)[0x10];
-    uint8_t(&Font)[0x50];
-    uint8_t(&SFont)[0xa0];
+    uint8_t (&V)[0x10];
+    uint8_t (&Font)[0x50];
+    uint8_t (&SFont)[0xa0];
     int64_t & Keys;
     uint64_t & Counter;
     int32_t & DT;
@@ -120,23 +117,19 @@ private:
     uint8_t & Over;
     uint8_t & ScrollV;
     uint8_t & ScrollH;
-    char(&Program)[0xe00];
-    uint64_t(&Pixels)[0x20];
-    uint64_t(&SPixels)[0x40][0x2];
+    char (&Program)[0xe00];
+    uint8_t (&Pixels)[0x40][0x20];
+    uint8_t (&SPixels)[0x80][0x40];
 
     Chip8 & operator=(const Chip8 &);
 
-    void SetupScreen(bool big)
-    {
+    void SetupScreen(bool big) {
         if (big) Screen = SDL_SetVideoMode(128 * Zoom, 64 * Zoom, 8, SDL_SWSURFACE);
         else Screen = SDL_SetVideoMode(64 * Zoom, 32 * Zoom, 8, SDL_SWSURFACE);
-        SDL_Color Colors[2] {{0, 15, 0, 255}, {31, 255, 31, 255}};
-        SDL_SetColors(Screen, Colors, 0, 2);
     }
 
-    void UpdateScreen()
-    {
-        const bool large {Large};
+    void UpdateScreen() {
+        const bool large{Large};
         if (large != WasLarge) {
             WasLarge = large;
             SetupScreen(large);
@@ -146,38 +139,36 @@ private:
             rect.y = y * Zoom;
             for (uint16_t x {0}; x < 128; ++x) {
                 rect.x = x * Zoom;
-                SDL_FillRect(Screen, &rect, (SPixels[y][x >> 6] >> (x & 0x3f)) & 1);
+                SDL_FillRect(Screen, &rect, SPixels[y][x]);
             }
         } else for (uint16_t y {0}; y < 32; ++y) {
             rect.y = y * Zoom;
             for (uint16_t x {0}; x < 64; ++x) {
                 rect.x = x * Zoom;
-                SDL_FillRect(Screen, &rect, (Pixels[y] >> x) & 1);
+                SDL_FillRect(Screen, &rect, Pixels[y][x]);
             }
         }
         SDL_Flip(Screen);
     }
 
-    void UpdateTime()
-    {
+    void UpdateTime() {
         ++CDT;
         if (ST - CST++ > 0) {
             //Beep - Anyone got something cross-platform?
         }
-        uint64_t count {Counter};
-        const std::chrono::high_resolution_clock::time_point cycle {std::chrono::high_resolution_clock::now()};
-        int64_t nano = std::chrono::duration_cast<std::chrono::nanoseconds>(cycle - LastCycle).count();
+        uint64_t count{Counter};
+        const std::chrono::high_resolution_clock::time_point cycle{std::chrono::high_resolution_clock::now()};
+        int64_t nano{std::chrono::duration_cast<std::chrono::nanoseconds>(cycle - LastCycle).count()};
         if (LastCount == count) ++count;
-        const std::string rate {std::to_string(nano / (count - LastCount)) + " nano per cycle"};
+        const std::string rate{std::to_string(nano / (count - LastCount)) + " nano per cycle"};
         SDL_WM_SetCaption(rate.c_str(), "");
         LastCycle = cycle;
         LastCount = count;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds{16});
     }
 
-    void HandleEvents()
-    {
-        SDL_Event e { };
+    void HandleEvents() {
+        SDL_Event e{};
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
             case SDL_QUIT:
@@ -232,8 +223,7 @@ private:
     }
 };//Class Chip8
 
-int main(int argc, char ** argv)
-{
-    Chip8 {argc > 1 ? argv[0] : "Clear.ch8"};
+int main(int argc, char ** argv) {
+    Chip8{argc > 1 ? argv[1] : "maze.ch8"};
     return 0;
 }
